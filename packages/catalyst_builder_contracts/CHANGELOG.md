@@ -1,3 +1,9 @@
+## 2.2.0
+
+### Features
+
+- Added `scope()` to `AbstractServiceContainer` for hierarchical child scopes (own instance cache + parent fallback).
+
 ## 2.1.0
 
 ### Features

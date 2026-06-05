@@ -34,6 +34,19 @@ abstract interface class AbstractServiceContainer {
     Map<String, dynamic> parameters = const {},
   });
 
+  /// Creates a child scope: a container with its OWN singleton-instance cache
+  /// and this container as parent. Unknown services resolve from the parent
+  /// (and cache there); services passed in [services] are scope-local and
+  /// cached only in the child, so they never leak into the parent or siblings.
+  ///
+  /// [parameters] are snapshot-merged at creation (parent parameters first,
+  /// then the provided [parameters]); service resolution still falls back to
+  /// the live parent on a local miss.
+  AbstractServiceContainer scope({
+    List<LazyServiceDescriptor> services = const [],
+    Map<String, dynamic> parameters = const {},
+  });
+
   /// Resolves a service or gets a matching parameter.
   /// If neither a service nor a parameter is found, an exception is thrown.
   T resolveOrGetParameter<T>(

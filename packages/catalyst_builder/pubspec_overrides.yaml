@@ -1,0 +1,6 @@
+# Local development override: resolve the sibling contracts package from source
+# so the builder's tests run against the in-repo (yet-unpublished) version.
+# Ignored by the parent workspace resolution (overrides only apply at the root).
+dependency_overrides:
+  catalyst_builder_contracts:
+    path: ../catalyst_builder_contracts

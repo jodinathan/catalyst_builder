@@ -1,3 +1,9 @@
+## 6.3.0
+
+### Features
+
+- Implemented `ServiceContainer.scope()`: child scope with an isolated singleton cache and parent resolution fallback (also for `has` and `resolveByTag`).
+
 ## 6.2.1
 
 ### Fixes

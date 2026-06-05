@@ -20,6 +20,8 @@ class ServiceContainer implements AbstractServiceContainer, ServiceRegistry {
 
   var _booted = false;
 
+  ServiceContainer? _parent;
+
   @override
   T? tryResolve<T>([Type? t]) {
     return _tryResolveInternal<T>(t ?? T);
@@ -34,7 +36,7 @@ class ServiceContainer implements AbstractServiceContainer, ServiceRegistry {
     }
     var descriptor = _knownServices[exposedType];
     if (descriptor == null) {
-      return null;
+      return _parent?._tryResolveInternal<T>(t);
     }
     var instance = descriptor.produce();
     if (descriptor.service.lifetime == ServiceLifetime.singleton) {
@@ -56,13 +58,15 @@ class ServiceContainer implements AbstractServiceContainer, ServiceRegistry {
   @override
   List<dynamic> resolveByTag(Symbol tag) {
     var services = <dynamic>[];
-    if (!_servicesByTag.containsKey(tag)) {
-      return services;
+    if (_servicesByTag.containsKey(tag)) {
+      for (var svc in _servicesByTag[tag]!) {
+        services.add((_tryResolveInternal(svc) as dynamic));
+      }
     }
-    for (var svc in _servicesByTag[tag]!) {
-      services.add((_tryResolveInternal(svc) as dynamic));
-    }
-    return services;
+    return [
+      ...services,
+      ...?_parent?.resolveByTag(tag),
+    ];
   }
 
   @override
@@ -114,7 +118,8 @@ class ServiceContainer implements AbstractServiceContainer, ServiceRegistry {
   @override
   bool has<T>([Type? type]) {
     var lookupType = type ?? T;
-    return _knownServices.containsKey(_exposeMap[lookupType] ?? lookupType);
+    return _knownServices.containsKey(_exposeMap[lookupType] ?? lookupType) ||
+        (_parent?.has<T>(type) ?? false);
   }
 
   @override
@@ -169,6 +174,33 @@ class ServiceContainer implements AbstractServiceContainer, ServiceRegistry {
     enhanced.parameters.addAll(parameters);
     enhanced._booted = true;
     return enhanced;
+  }
+
+  @override
+  AbstractServiceContainer scope({
+    List<LazyServiceDescriptor> services = const <LazyServiceDescriptor>[],
+    Map<String, dynamic> parameters = const <String, dynamic>{},
+  }) {
+    _ensureBoot();
+    var child = ServiceContainer();
+    child._parent = this;
+    // child._serviceInstances stays its OWN fresh empty map (the key difference
+    // from enhance, which shares the parent's map by reference). Scope-local
+    // services registered below bind their factory to the child, so they
+    // resolve their own dependencies through the child first, then the parent.
+    for (var service in services) {
+      child._registerInternal(
+        service.returnType,
+        service.factory,
+        service.service,
+      );
+    }
+    // Parameters are snapshot-merged at creation; service resolution still uses
+    // live parent fallback through _tryResolveInternal.
+    child.parameters.addAll(this.parameters);
+    child.parameters.addAll(parameters);
+    child._booted = true;
+    return child;
   }
 
   @override
